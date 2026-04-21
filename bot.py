@@ -10,16 +10,20 @@ ACCESS_LINK = os.getenv("ACCESS_LINK")  # ссылка на личку
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# -------------------
 # Языковые кнопки
-lang_kb = InlineKeyboardMarkup(row_width=2)
-lang_kb.add(
+# -------------------
+lang_kb = InlineKeyboardMarkup()
+lang_kb.row(
     InlineKeyboardButton("🇷🇺 RU", callback_data="lang_ru"),
     InlineKeyboardButton("🇬🇧 ENG", callback_data="lang_eng")
 )
 
+# -------------------
 # Главное меню
+# -------------------
 def main_menu(lang="ru"):
-    kb = InlineKeyboardMarkup(row_width=1)
+    kb = InlineKeyboardMarkup()
     if lang == "ru":
         kb.add(
             InlineKeyboardButton("💰 Тарифы", callback_data="tariffs"),
@@ -34,7 +38,9 @@ def main_menu(lang="ru"):
         )
     return kb
 
+# -------------------
 # Тарифы
+# -------------------
 tariffs_text = {
     "ru": """
 Тариф BRONZE
@@ -58,16 +64,19 @@ Subscription to private channel for 1 month + personal communication with me.
 """
 }
 
+# -------------------
 # Подписка кнопки
-subscribe_kb = InlineKeyboardMarkup(row_width=1)
+# -------------------
+subscribe_kb = InlineKeyboardMarkup()
 subscribe_kb.add(
     InlineKeyboardButton("BRONZE 💎", url=ACCESS_LINK),
     InlineKeyboardButton("SILVER 💎", url=ACCESS_LINK),
     InlineKeyboardButton("GOLD 💎", url=ACCESS_LINK)
 )
 
-# ------------------- Хендлеры -------------------
-
+# -------------------
+# Хендлеры
+# -------------------
 @dp.message()
 async def handle_start(message: types.Message):
     if message.text == "/start":
@@ -80,14 +89,15 @@ async def handle_callbacks(callback: types.CallbackQuery):
         lang = "ru" if data == "lang_ru" else "eng"
         await bot.send_message(callback.from_user.id, "Главное меню:" if lang=="ru" else "Main menu:", reply_markup=main_menu(lang))
     elif data == "tariffs":
-        # Определяем язык, проверяя текст предыдущего сообщения
-        # Для простоты, покажем русский
+        # Для простоты покажем русский
         await bot.send_message(callback.from_user.id, tariffs_text["ru"])
     elif data == "subscribe":
         await bot.send_message(callback.from_user.id, "Выберите тариф:", reply_markup=subscribe_kb)
     elif data == "support":
         await bot.send_message(callback.from_user.id, f"Для поддержки напишите сюда: {ACCESS_LINK}")
 
-# ------------------- Запуск бота -------------------
+# -------------------
+# Запуск бота
+# -------------------
 if __name__ == "__main__":
     asyncio.run(dp.start_polling(bot))
