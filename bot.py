@@ -10,9 +10,7 @@ ACCESS_LINK = os.getenv("ACCESS_LINK")  # ссылка на личку Telegram
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# -------------------
-# Языковые кнопки
-# -------------------
+# ======= Клавиатура выбора языка =======
 lang_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [
@@ -22,12 +20,10 @@ lang_kb = InlineKeyboardMarkup(
     ]
 )
 
-# -------------------
-# Главное меню
-# -------------------
+# ======= Главное меню =======
 def main_menu(lang="ru") -> InlineKeyboardMarkup:
     if lang == "ru":
-        kb = InlineKeyboardMarkup(
+        return InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="💰 Тарифы", callback_data="tariffs")],
                 [InlineKeyboardButton(text="📩 Оформить подписку", callback_data="subscribe")],
@@ -35,53 +31,46 @@ def main_menu(lang="ru") -> InlineKeyboardMarkup:
             ]
         )
     else:
-        kb = InlineKeyboardMarkup(
+        return InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="💰 Tariffs", callback_data="tariffs")],
                 [InlineKeyboardButton(text="📩 Subscribe", callback_data="subscribe")],
                 [InlineKeyboardButton(text="🆘 Support", callback_data="support")]
             ]
         )
-    return kb
 
-# -------------------
-# Тарифы
-# -------------------
+# ======= Тарифы с оформлением =======
 tariffs_text = {
     "ru": """
-Тариф BRONZE
-Подписка на мой приватный канал на 1 месяц.
+💎 **Тариф BRONZE**  
+📅 Подписка на мой приватный канал на 1 месяц.
 
-Тариф SILVER
-Личное общение со мной: разговоры о жизни и других темах.
+💬 **Тариф SILVER**  
+Личное общение со мной: разговоры о жизни и других темах (формат и длительность по договорённости).
 
-Тариф GOLD
-Подписка на приватный канал на 1 месяц + личное общение со мной.
+💎💬 **Тариф GOLD**  
+📅 Подписка на приватный канал на 1 месяц + личное общение со мной.
 """,
     "eng": """
-Plan BRONZE
-Subscription to my private channel for 1 month.
+💎 **Plan BRONZE**  
+📅 Subscription to my private channel for 1 month.
 
-Plan SILVER
-Personal communication with me: talks about life and other topics.
+💬 **Plan SILVER**  
+Personal communication with me: talks about life and other topics (format and duration by agreement).
 
-Plan GOLD
-Subscription to private channel for 1 month + personal communication with me.
+💎💬 **Plan GOLD**  
+📅 Subscription to private channel for 1 month + personal communication with me.
 """
 }
 
-# -------------------
-# Кнопка подписки (только одна)
-# -------------------
+# ======= Кнопка подписки (одна кнопка) =======
 subscribe_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="ОФОРМИТЬ ПОДПИСКУ 💳", url=ACCESS_LINK)]
     ]
 )
 
-# -------------------
-# Хендлеры
-# -------------------
+# ======= Хендлеры =======
 @dp.message()
 async def handle_start(message: types.Message):
     if message.text == "/start":
@@ -98,18 +87,17 @@ async def handle_callbacks(callback: types.CallbackQuery):
             reply_markup=main_menu(lang)
         )
     elif data == "tariffs":
-        await bot.send_message(callback.from_user.id, tariffs_text["ru"])
+        lang = "ru"
+        if callback.message.text.startswith("Main menu:"):
+            lang = "eng"
+        await bot.send_message(callback.from_user.id, tariffs_text[lang], parse_mode="Markdown")
     elif data == "subscribe":
-        await bot.send_message(
-            callback.from_user.id,
-            "Нажмите, чтобы оформить подписку:",
-            reply_markup=subscribe_kb
-        )
+        msg_text = "Нажмите, чтобы оформить подписку:" if callback.message.text.startswith("Главное") else "Click to subscribe:"
+        await bot.send_message(callback.from_user.id, msg_text, reply_markup=subscribe_kb)
     elif data == "support":
-        await bot.send_message(callback.from_user.id, f"Для поддержки напишите сюда: {ACCESS_LINK}")
+        msg_text = f"Для поддержки напишите сюда: {ACCESS_LINK}" if callback.message.text.startswith("Главное") else f"For support contact: {ACCESS_LINK}"
+        await bot.send_message(callback.from_user.id, msg_text)
 
-# -------------------
-# Запуск бота
-# -------------------
+# ======= Запуск бота =======
 if __name__ == "__main__":
     asyncio.run(dp.start_polling(bot))
