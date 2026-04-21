@@ -5,7 +5,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Переменные окружения
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ACCESS_LINK = os.getenv("ACCESS_LINK")  # ссылка на личку
+ACCESS_LINK = os.getenv("ACCESS_LINK")  # ссылка на личку Telegram
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -71,13 +71,11 @@ Subscription to private channel for 1 month + personal communication with me.
 }
 
 # -------------------
-# Кнопки подписки
+# Кнопка подписки (только одна)
 # -------------------
 subscribe_kb = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="BRONZE 💎", url=ACCESS_LINK)],
-        [InlineKeyboardButton(text="SILVER 💎", url=ACCESS_LINK)],
-        [InlineKeyboardButton(text="GOLD 💎", url=ACCESS_LINK)]
+        [InlineKeyboardButton(text="ОФОРМИТЬ ПОДПИСКУ 💳", url=ACCESS_LINK)]
     ]
 )
 
@@ -94,13 +92,19 @@ async def handle_callbacks(callback: types.CallbackQuery):
     data = callback.data
     if data in ["lang_ru", "lang_eng"]:
         lang = "ru" if data == "lang_ru" else "eng"
-        await bot.send_message(callback.from_user.id,
-                               "Главное меню:" if lang=="ru" else "Main menu:",
-                               reply_markup=main_menu(lang))
+        await bot.send_message(
+            callback.from_user.id,
+            "Главное меню:" if lang == "ru" else "Main menu:",
+            reply_markup=main_menu(lang)
+        )
     elif data == "tariffs":
         await bot.send_message(callback.from_user.id, tariffs_text["ru"])
     elif data == "subscribe":
-        await bot.send_message(callback.from_user.id, "Выберите тариф:", reply_markup=subscribe_kb)
+        await bot.send_message(
+            callback.from_user.id,
+            "Нажмите, чтобы оформить подписку:",
+            reply_markup=subscribe_kb
+        )
     elif data == "support":
         await bot.send_message(callback.from_user.id, f"Для поддержки напишите сюда: {ACCESS_LINK}")
 
