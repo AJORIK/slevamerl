@@ -1,93 +1,92 @@
-import asyncio
 import os
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.filters import Command
+from aiogram.utils import executor
 
-# Получаем токен бота и ссылку на личку из переменных окружения Railway
-API_TOKEN = os.environ.get("BOT_TOKEN")
-ACCESS_LINK = os.environ.get("ACCESS_LINK")  # ссылка на личку для общения
+# Получаем токен и ссылку из переменных среды
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ACCESS_LINK = os.getenv("ACCESS_LINK")
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(bot)
 
-# -----------------------------
-# Описание тарифов
-# -----------------------------
-PLAN_DESCRIPTIONS = {
-    "bronze": "Тариф BRONZE\n\nПодписка на мой приватный канал на 1 месяц.",
-    "silver": "Тариф SILVER\n\nЛичное общение со мной: разговоры о жизни и других темах (формат и длительность по договорённости).",
-    "gold": "Тариф GOLD\n\nПодписка на приватный канал на 1 месяц + личное общение со мной (всё из тарифов BRONZE и SILVER)."
-}
+# Языковые кнопки
+lang_kb = InlineKeyboardMarkup(row_width=2)
+lang_kb.add(
+    InlineKeyboardButton("🇷🇺 RU", callback_data="lang_ru"),
+    InlineKeyboardButton("🇬🇧 ENG", callback_data="lang_eng")
+)
 
-# -----------------------------
-# Главное меню
-# -----------------------------
-def main_menu(lang="RU"):
-    if lang == "RU":
-        kb = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("📊 Тарифы")],
-                [KeyboardButton("🛠 Поддержка")]
-            ],
-            resize_keyboard=True
+# Основное меню
+def main_menu(lang="ru"):
+    if lang == "ru":
+        kb = InlineKeyboardMarkup(row_width=1)
+        kb.add(
+            InlineKeyboardButton("💰 Тарифы", callback_data="tariffs"),
+            InlineKeyboardButton("📩 Оформить подписку", callback_data="subscribe"),
+            InlineKeyboardButton("🆘 Поддержка", callback_data="support")
         )
     else:
-        kb = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton("📊 Tariffs")],
-                [KeyboardButton("🛠 Support")]
-            ],
-            resize_keyboard=True
+        kb = InlineKeyboardMarkup(row_width=1)
+        kb.add(
+            InlineKeyboardButton("💰 Tariffs", callback_data="tariffs"),
+            InlineKeyboardButton("📩 Subscribe", callback_data="subscribe"),
+            InlineKeyboardButton("🆘 Support", callback_data="support")
         )
     return kb
 
-# -----------------------------
-# Старт
-# -----------------------------
-@dp.message(Command(commands=["start"]))
-async def cmd_start(message: types.Message):
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton("🇷🇺 RU"), KeyboardButton("🇬🇧 ENG")]],
-        resize_keyboard=True
-    )
-    await message.answer("Выберите язык / Choose language:", reply_markup=kb)
-    message.from_user.language = "RU"
+# Тарифы
+tariffs_text = {
+    "ru": """
+Тариф BRONZE
+Подписка на мой приватный канал на 1 месяц.
 
-# -----------------------------
-# Выбор языка
-# -----------------------------
-@dp.message(F.text.in_({"🇷🇺 RU", "🇬🇧 ENG"}))
-async def select_language(message: types.Message):
-    lang = "RU" if "RU" in message.text else "ENG"
-    await message.answer("Главное меню:" if lang == "RU" else "Main Menu:", reply_markup=main_menu(lang))
-    message.from_user.language = lang
+Тариф SILVER
+Личное общение со мной: разговоры о жизни и других темах.
 
-# -----------------------------
-# Показ тарифов
-# -----------------------------
-@dp.message(F.text.in_({"📊 Тарифы", "📊 Tariffs"}))
-async def show_tariffs(message: types.Message):
-    lang = "RU" if "Тарифы" in message.text else "ENG"
+Тариф GOLD
+Подписка на приватный канал на 1 месяц + личное общение со мной.
+""",
+    "eng": """
+Plan BRONZE
+Subscription to my private channel for 1 month.
 
-    for plan in ["bronze", "silver", "gold"]:
-        description = PLAN_DESCRIPTIONS[plan]
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton("ПОЛУЧИТЬ ДОСТУП" if lang=="RU" else "GET ACCESS", url=ACCESS_LINK)]
-        ])
-        await message.answer(f"{description}", reply_markup=kb)
+Plan SILVER
+Personal communication with me: talks about life and other topics.
 
-# -----------------------------
-# Поддержка
-# -----------------------------
-@dp.message(F.text.in_({"🛠 Поддержка", "🛠 Support"}))
-async def support(message: types.Message):
-    await message.answer(
-        "Связь с поддержкой: @YourSupportUsername" if "Поддержка" in message.text else "Contact support: @YourSupportUsername"
-    )
+Plan GOLD
+Subscription to private channel for 1 month + personal communication with me.
+"""
+}
 
-# -----------------------------
-# Запуск бота
-# -----------------------------
+# Кнопки для подписки
+subscribe_kb = InlineKeyboardMarkup(row_width=1)
+subscribe_kb.add(
+    InlineKeyboardButton("BRONZE 💎", url=ACCESS_LINK),
+    InlineKeyboardButton("SILVER 💎", url=ACCESS_LINK),
+    InlineKeyboardButton("GOLD 💎", url=ACCESS_LINK)
+)
+
+@dp.message_handler(commands=["start"])
+async def start(message: types.Message):
+    await message.answer("Выберите язык / Choose language:", reply_markup=lang_kb)
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("lang_"))
+async def choose_lang(callback_query: types.CallbackQuery):
+    lang = "ru" if callback_query.data == "lang_ru" else "eng"
+    await bot.send_message(callback_query.from_user.id, "Главное меню:" if lang=="ru" else "Main menu:", reply_markup=main_menu(lang))
+
+@dp.callback_query_handler(lambda c: c.data == "tariffs")
+async def show_tariffs(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, tariffs_text["ru"])
+
+@dp.callback_query_handler(lambda c: c.data == "subscribe")
+async def show_subscribe(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, "Выберите тариф:", reply_markup=subscribe_kb)
+
+@dp.callback_query_handler(lambda c: c.data == "support")
+async def show_support(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, f"Для поддержки напишите сюда: {ACCESS_LINK}")
+
 if __name__ == "__main__":
-    asyncio.run(dp.start_polling(bot))
+    executor.start_polling(dp, skip_updates=True)
