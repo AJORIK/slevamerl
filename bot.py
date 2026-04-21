@@ -1,68 +1,111 @@
 import os
+import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.filters import Command
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
 
-# Получаем токен из переменных окружения Railway
+# Переменные окружения
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-WALLET = "TAbriJG56DUcVFzW8jik3jPvwNtUrntda5"
+ACCESS_LINK = os.getenv("ACCESS_LINK")  # ссылка на личку
 
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
+dp = Dispatcher()
 
-# ======= Клавиатура выбора языка =======
-lang_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🇷🇺 RU", callback_data="lang_ru"),
-     InlineKeyboardButton(text="🇬🇧 ENG", callback_data="lang_en")]
-])
+# -------------------
+# Языковые кнопки
+# -------------------
+lang_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🇷🇺 RU", callback_data="lang_ru"),
+            InlineKeyboardButton(text="🇬🇧 ENG", callback_data="lang_eng")
+        ]
+    ]
+)
 
-# ======= Главное меню =======
-def main_menu(lang="ru"):
+# -------------------
+# Главное меню
+# -------------------
+def main_menu(lang="ru") -> InlineKeyboardMarkup:
     if lang == "ru":
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📜 Тарифы", callback_data="tariffs")],
-            [InlineKeyboardButton(text="💳 Получить доступ", callback_data="subscribe")],
-            [InlineKeyboardButton(text="🛠 Поддержка", url="https://t.me/your_support")]  # замени на свою ссылку поддержки
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Тарифы", callback_data="tariffs")],
+                [InlineKeyboardButton(text="📩 Оформить подписку", callback_data="subscribe")],
+                [InlineKeyboardButton(text="🆘 Поддержка", callback_data="support")]
+            ]
+        )
     else:
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📜 Tariffs", callback_data="tariffs")],
-            [InlineKeyboardButton(text="💳 Get Access", callback_data="subscribe")],
-            [InlineKeyboardButton(text="🛠 Support", url="https://t.me/your_support")]
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Tariffs", callback_data="tariffs")],
+                [InlineKeyboardButton(text="📩 Subscribe", callback_data="subscribe")],
+                [InlineKeyboardButton(text="🆘 Support", callback_data="support")]
+            ]
+        )
     return kb
 
-# ======= Клавиатура тарифов =======
-tariffs_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="BRONZE - 5000", url=f"https://t.me/{WALLET}")],
-    [InlineKeyboardButton(text="SILVER - 5000", url=f"https://t.me/{WALLET}")],
-    [InlineKeyboardButton(text="GOLD - 7500", url=f"https://t.me/{WALLET}")]
-])
+# -------------------
+# Тарифы
+# -------------------
+tariffs_text = {
+    "ru": """
+Тариф BRONZE
+Подписка на мой приватный канал на 1 месяц.
 
-# ======= Обработчики =======
-@dp.message(Command("start"))
-async def start_handler(message: types.Message, state: FSMContext):
-    await message.answer("Выберите язык / Choose language:", reply_markup=lang_kb)
+Тариф SILVER
+Личное общение со мной: разговоры о жизни и других темах.
 
-@dp.callback_query(lambda c: c.data in ["lang_ru", "lang_en"])
-async def lang_callback_handler(callback: CallbackQuery, state: FSMContext):
-    lang = "ru" if callback.data == "lang_ru" else "en"
-    await callback.message.edit_text(
-        "Главное меню:" if lang == "ru" else "Main menu:", 
-        reply_markup=main_menu(lang)
-    )
+Тариф GOLD
+Подписка на приватный канал на 1 месяц + личное общение со мной.
+""",
+    "eng": """
+Plan BRONZE
+Subscription to my private channel for 1 month.
 
-@dp.callback_query(lambda c: c.data == "tariffs")
-async def tariffs_handler(callback: CallbackQuery):
-    await callback.message.answer("Тарифы и цены:", reply_markup=tariffs_kb)
+Plan SILVER
+Personal communication with me: talks about life and other topics.
 
-@dp.callback_query(lambda c: c.data == "subscribe")
-async def subscribe_handler(callback: CallbackQuery):
-    await callback.message.answer("Выберите тариф для получения доступа:", reply_markup=tariffs_kb)
+Plan GOLD
+Subscription to private channel for 1 month + personal communication with me.
+"""
+}
 
+# -------------------
+# Кнопки подписки
+# -------------------
+subscribe_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="BRONZE 💎", url=ACCESS_LINK)],
+        [InlineKeyboardButton(text="SILVER 💎", url=ACCESS_LINK)],
+        [InlineKeyboardButton(text="GOLD 💎", url=ACCESS_LINK)]
+    ]
+)
+
+# -------------------
+# Хендлеры
+# -------------------
+@dp.message()
+async def handle_start(message: types.Message):
+    if message.text == "/start":
+        await message.answer("Выберите язык / Choose language:", reply_markup=lang_kb)
+
+@dp.callback_query()
+async def handle_callbacks(callback: types.CallbackQuery):
+    data = callback.data
+    if data in ["lang_ru", "lang_eng"]:
+        lang = "ru" if data == "lang_ru" else "eng"
+        await bot.send_message(callback.from_user.id,
+                               "Главное меню:" if lang=="ru" else "Main menu:",
+                               reply_markup=main_menu(lang))
+    elif data == "tariffs":
+        await bot.send_message(callback.from_user.id, tariffs_text["ru"])
+    elif data == "subscribe":
+        await bot.send_message(callback.from_user.id, "Выберите тариф:", reply_markup=subscribe_kb)
+    elif data == "support":
+        await bot.send_message(callback.from_user.id, f"Для поддержки напишите сюда: {ACCESS_LINK}")
+
+# -------------------
+# Запуск бота
+# -------------------
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(dp.start_polling(bot))
