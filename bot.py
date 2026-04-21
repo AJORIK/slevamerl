@@ -13,28 +13,34 @@ dp = Dispatcher()
 # -------------------
 # Языковые кнопки
 # -------------------
-lang_kb = InlineKeyboardMarkup()
-lang_kb.row(
-    InlineKeyboardButton("🇷🇺 RU", callback_data="lang_ru"),
-    InlineKeyboardButton("🇬🇧 ENG", callback_data="lang_eng")
+lang_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🇷🇺 RU", callback_data="lang_ru"),
+            InlineKeyboardButton(text="🇬🇧 ENG", callback_data="lang_eng")
+        ]
+    ]
 )
 
 # -------------------
 # Главное меню
 # -------------------
-def main_menu(lang="ru"):
-    kb = InlineKeyboardMarkup()
+def main_menu(lang="ru") -> InlineKeyboardMarkup:
     if lang == "ru":
-        kb.add(
-            InlineKeyboardButton("💰 Тарифы", callback_data="tariffs"),
-            InlineKeyboardButton("📩 Оформить подписку", callback_data="subscribe"),
-            InlineKeyboardButton("🆘 Поддержка", callback_data="support")
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Тарифы", callback_data="tariffs")],
+                [InlineKeyboardButton(text="📩 Оформить подписку", callback_data="subscribe")],
+                [InlineKeyboardButton(text="🆘 Поддержка", callback_data="support")]
+            ]
         )
     else:
-        kb.add(
-            InlineKeyboardButton("💰 Tariffs", callback_data="tariffs"),
-            InlineKeyboardButton("📩 Subscribe", callback_data="subscribe"),
-            InlineKeyboardButton("🆘 Support", callback_data="support")
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Tariffs", callback_data="tariffs")],
+                [InlineKeyboardButton(text="📩 Subscribe", callback_data="subscribe")],
+                [InlineKeyboardButton(text="🆘 Support", callback_data="support")]
+            ]
         )
     return kb
 
@@ -65,13 +71,14 @@ Subscription to private channel for 1 month + personal communication with me.
 }
 
 # -------------------
-# Подписка кнопки
+# Кнопки подписки
 # -------------------
-subscribe_kb = InlineKeyboardMarkup()
-subscribe_kb.add(
-    InlineKeyboardButton("BRONZE 💎", url=ACCESS_LINK),
-    InlineKeyboardButton("SILVER 💎", url=ACCESS_LINK),
-    InlineKeyboardButton("GOLD 💎", url=ACCESS_LINK)
+subscribe_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="BRONZE 💎", url=ACCESS_LINK)],
+        [InlineKeyboardButton(text="SILVER 💎", url=ACCESS_LINK)],
+        [InlineKeyboardButton(text="GOLD 💎", url=ACCESS_LINK)]
+    ]
 )
 
 # -------------------
@@ -87,9 +94,10 @@ async def handle_callbacks(callback: types.CallbackQuery):
     data = callback.data
     if data in ["lang_ru", "lang_eng"]:
         lang = "ru" if data == "lang_ru" else "eng"
-        await bot.send_message(callback.from_user.id, "Главное меню:" if lang=="ru" else "Main menu:", reply_markup=main_menu(lang))
+        await bot.send_message(callback.from_user.id,
+                               "Главное меню:" if lang=="ru" else "Main menu:",
+                               reply_markup=main_menu(lang))
     elif data == "tariffs":
-        # Для простоты покажем русский
         await bot.send_message(callback.from_user.id, tariffs_text["ru"])
     elif data == "subscribe":
         await bot.send_message(callback.from_user.id, "Выберите тариф:", reply_markup=subscribe_kb)
