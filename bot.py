@@ -1,13 +1,22 @@
 import os
 import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    FSInputFile
+)
 
 # -------------------
 # Переменные окружения
 # -------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ACCESS_LINK = os.getenv("ACCESS_LINK")  # ссылка на личку Telegram
+
+# -------------------
+# Фото главного меню
+# -------------------
+MENU_PHOTO = "promo.jpg"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -21,8 +30,10 @@ user_lang = {}  # user_id: "ru" / "en"
 # Клавиатура выбора языка
 # -------------------
 lang_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🇷🇺 RU", callback_data="lang_ru"),
-     InlineKeyboardButton(text="🇬🇧 ENG", callback_data="lang_en")]
+    [
+        InlineKeyboardButton(text="🇷🇺 RU", callback_data="lang_ru"),
+        InlineKeyboardButton(text="🇬🇧 ENG", callback_data="lang_en")
+    ]
 ])
 
 # -------------------
@@ -43,28 +54,28 @@ def main_menu(lang="ru"):
         ])
 
 # -------------------
-# Тарифы с оформлением
+# Тарифы
 # -------------------
 tariffs_text = {
     "ru": """
-💎 **Тариф BRONZE**  
+💎 *Тариф BRONZE*  
 📅 Подписка на мой приватный канал на 1 месяц.
 
-💬 **Тариф SILVER**  
-Личное общение со мной: разговоры о жизни и других темах (формат и длительность по договорённости).
+💬 *Тариф SILVER*  
+Личное общение со мной: разговоры о жизни и других темах.
 
-💎💬 **Тариф GOLD**  
-📅 Подписка на приватный канал на 1 месяц + личное общение со мной.
+💎💬 *Тариф GOLD*  
+📅 Подписка на приватный канал на 1 месяц + личное общение.
 """,
     "en": """
-💎 **Plan BRONZE**  
+💎 *Plan BRONZE*  
 📅 Subscription to my private channel for 1 month.
 
-💬 **Plan SILVER**  
-Personal communication with me: talks about life and other topics (format and duration by agreement).
+💬 *Plan SILVER*  
+Personal communication with me.
 
-💎💬 **Plan GOLD**  
-📅 Subscription to private channel for 1 month + personal communication with me.
+💎💬 *Plan GOLD*  
+📅 Subscription to private channel for 1 month + personal communication.
 """
 }
 
@@ -72,66 +83,121 @@ Personal communication with me: talks about life and other topics (format and du
 # Кнопка подписки
 # -------------------
 def subscribe_kb(lang="ru"):
-    text = "ОФОРМИТЬ ПОДПИСКУ 💳" if lang=="ru" else "SUBSCRIBE 💳"
+    text = "ОФОРМИТЬ ПОДПИСКУ 💳" if lang == "ru" else "SUBSCRIBE 💳"
+
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=text, url=ACCESS_LINK)],
-        [InlineKeyboardButton(text="⬅ Назад" if lang=="ru" else "⬅ Back", callback_data="main")]
+        [InlineKeyboardButton(
+            text="⬅ Назад" if lang == "ru" else "⬅ Back",
+            callback_data="main"
+        )]
     ])
 
 # -------------------
-# Кнопка назад для тарифов
+# Кнопка назад
 # -------------------
 def back_kb(lang="ru"):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅ Назад" if lang=="ru" else "⬅ Back", callback_data="main")]
+        [InlineKeyboardButton(
+            text="⬅ Назад" if lang == "ru" else "⬅ Back",
+            callback_data="main"
+        )]
     ])
 
 # -------------------
-# Хендлеры
+# START
 # -------------------
 @dp.message()
 async def handle_start(message: types.Message):
     if message.text == "/start":
-        await message.answer("Выберите язык / Choose language:", reply_markup=lang_kb)
+        await message.answer_photo(
+            photo=FSInputFile(MENU_PHOTO),
+            caption="Выберите язык / Choose language:",
+            reply_markup=lang_kb
+        )
 
+# -------------------
+# CALLBACKS
+# -------------------
 @dp.callback_query()
 async def handle_callbacks(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     data = callback.data
 
+    # -------------------
     # Выбор языка
+    # -------------------
     if data in ["lang_ru", "lang_en"]:
-        lang = "ru" if data=="lang_ru" else "en"
+        lang = "ru" if data == "lang_ru" else "en"
         user_lang[user_id] = lang
-        await callback.message.edit_text("Главное меню:" if lang=="ru" else "Main menu:",
-                                         reply_markup=main_menu(lang))
+
+        await callback.message.edit_caption(
+            caption="Главное меню:" if lang == "ru" else "Main menu:",
+            reply_markup=main_menu(lang)
+        )
+
         return
 
-    # Получаем язык пользователя, по умолчанию русский
+    # -------------------
+    # Язык пользователя
+    # -------------------
     lang = user_lang.get(user_id, "ru")
 
+    # -------------------
     # Главное меню
+    # -------------------
     if data == "main":
-        await callback.message.edit_text("Главное меню:" if lang=="ru" else "Main menu:",
-                                         reply_markup=main_menu(lang))
+        await callback.message.edit_caption(
+            caption="Главное меню:" if lang == "ru" else "Main menu:",
+            reply_markup=main_menu(lang)
+        )
+
         return
 
+    # -------------------
     # Тарифы
+    # -------------------
     if data == "tariffs":
-        await callback.message.edit_text(tariffs_text[lang], parse_mode="Markdown",
-                                         reply_markup=back_kb(lang))
+        await callback.message.edit_caption(
+            caption=tariffs_text[lang],
+            parse_mode="Markdown",
+            reply_markup=back_kb(lang)
+        )
+
         return
 
+    # -------------------
     # Подписка
+    # -------------------
     if data == "subscribe":
-        msg_text = "Нажмите, чтобы оформить подписку:" if lang=="ru" else "Click to subscribe:"
-        await callback.message.edit_text(msg_text, reply_markup=subscribe_kb(lang))
+        msg_text = (
+            "Нажмите, чтобы оформить подписку:"
+            if lang == "ru"
+            else "Click to subscribe:"
+        )
+
+        await callback.message.edit_caption(
+            caption=msg_text,
+            reply_markup=subscribe_kb(lang)
+        )
+
         return
 
+    # -------------------
     # Поддержка
+    # -------------------
     if data == "support":
-        msg_text = f"Для поддержки напишите сюда: {ACCESS_LINK}" if lang=="ru" else f"For support contact: {ACCESS_LINK}"
-        await callback.message.edit_text(msg_text, reply_markup=back_kb(lang))
+        msg_text = (
+            f"Для поддержки напишите сюда: {ACCESS_LINK}"
+            if lang == "ru"
+            else f"For support contact: {ACCESS_LINK}"
+        )
+
+        await callback.message.edit_caption(
+            caption=msg_text,
+            reply_markup=back_kb(lang)
+        )
+
         return
 
 # -------------------
